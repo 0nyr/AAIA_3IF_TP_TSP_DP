@@ -83,7 +83,10 @@ int** createCost(int n){
     return cost;
 }
 
+__uint64_t nb_calls = 0; // number of calls to computeD
+
 int computeD(int i, set s, int n, int** cost){
+    nb_calls += 1;
     // Preconditions: isIn(i,s) = false and isIn(0,s) = false
     // Postrelation: return the cost of the smallest path that starts from i, visits each vertex of s exactly once, and ends on 0
     if (isEmpty(s)) return cost[i][0];
@@ -92,7 +95,7 @@ int computeD(int i, set s, int n, int** cost){
         if (isIn(j,s)){
             int d = computeD(j, removeElement(s,j), n, cost);
             if (cost[i][j] + d < min) min = cost[i][j] + d;
-         }
+        }
     }
     return min;
 }
@@ -110,5 +113,6 @@ int main(){
     int d = computeD(0, s, n, cost);
     float duration = ((double) (clock() - t)) / CLOCKS_PER_SEC;
     printf("Length of the smallest hamiltonian circuit = %d; CPU time = %.3fs\n", d, duration);
+    printf("    - Number of calls to computeD = %lu\n", nb_calls);
     return 0;
 }

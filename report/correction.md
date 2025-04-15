@@ -169,3 +169,53 @@ sur 0 ?*
 
 C'est le sous-problème: $D(0, S \ {0})$. Ce sous-problème part de $i=0$ jusqu'à $0$ (par définition). C'est un circuit hamiltonien car son ensemble de sommet visités $E = S \setminus \{0\}$ contient tous les sommets (sauf $i=0$ par définition).
 
+## 3. Implémentation naïve.
+
+On considère `src/TSPnaif.c`.
+
+### Questions 5, 6, 7
+```
+ ❮onyr ★ kenzae❯ ❮AAIA_3IF_TP_TSP_DP❯❯ ./bin/TSPnaifO3 
+Number of vertices: 8
+Length of the smallest hamiltonian circuit = 2633; CPU time = 0.000s
+    - Number of calls to computeD = 13700
+ ❮onyr ★ kenzae❯ ❮AAIA_3IF_TP_TSP_DP❯❯ ./bin/TSPnaifO3 
+Number of vertices: 10
+Length of the smallest hamiltonian circuit = 2735; CPU time = 0.010s
+    - Number of calls to computeD = 986410
+ ❮onyr ★ kenzae❯ ❮AAIA_3IF_TP_TSP_DP❯❯ ./bin/TSPnaifO3 
+Number of vertices: 12
+Length of the smallest hamiltonian circuit = 2801; CPU time = 1.371s
+    - Number of calls to computeD = 108505112
+```
+
+### Question 8:
+
+*Combien y-a-t-il d’appels récursifs par rapport au nombre de sous-problèmes différents ?*
+
+>[!WARNING]
+Dans le code de Christine, le set $s$ correspond à l'inverse de celui défini dans le sujet: il correspond aux noeuds qu'il est encore possible de visiter, et non pas à ceux déjà visités.
+
+```python
+>>> def calc(x): return (x)*(2**(x-1))
+... 
+>>> calc(3)
+12
+>>> calc(8)
+1024
+```
+
+```
+ ❮onyr ★ kenzae❯ ❮AAIA_3IF_TP_TSP_DP❯❯ ./bin/TSPnaifO3 
+Number of vertices: 3
+Length of the smallest hamiltonian circuit = 1904; CPU time = 0.000s
+    - Number of calls to computeD = 5
+ ❮onyr ★ kenzae❯ ❮AAIA_3IF_TP_TSP_DP❯❯ ./bin/TSPnaifO3 
+Number of vertices: 8
+Length of the smallest hamiltonian circuit = 2633; CPU time = 0.001s
+    - Number of calls to computeD = 13700
+```
+
+Il n'y a pas le même nombre d'appel récursifs que de sous-problèmes différents. Cela vient du fait de l'implémentation qui diffère du pseudocode. En pratique le nombre d'appels croit plus vite que le nombre de sous-problème alors ce ce dernier est déjà exponentiel à cause de l'ordre naïf des appels récursifs.
+
+

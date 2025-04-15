@@ -15,7 +15,7 @@ INCLUDE=inc/
 CC=gcc # Use gcc for C
 GDB_DEBUGGER_FLAGS=-g
 PERSONAL_COMPIL_FLAGS=-D DEBUG # use own flags, see util.h
-CFLAGS=-I $(INCLUDE) -march=native -O3 $(PERSONAL_COMPIL_FLAGS) $(GDB_DEBUGGER_FLAGS)
+CFLAGS=-I $(INCLUDE) -march=native -O3 #$(PERSONAL_COMPIL_FLAGS) $(GDB_DEBUGGER_FLAGS)
 LDLIBS=-lm # -lm for math.h
 LDFLAGS=-Wall -std=c11 # Adjusted for C, -std=c11 for C11 standard
 
@@ -48,6 +48,14 @@ tsp: src/tsp.c
 tspO3: src/tsp.c
 	$(ECHO) "$(LIGHT_ORANGE_COLOR)*** Compiling tsp.c with O3 *** $(NO_COLOR)"
 	$(CC) -o bin/tspO3 src/tsp.c $(CFLAGS) $(LDFLAGS) $(LDLIBS)
+
+TSPnaif: src/TSPnaif.c
+	$(ECHO) "$(LIGHT_ORANGE_COLOR)*** Compiling TSPnaif.c *** $(NO_COLOR)"
+	$(CC) -o bin/TSPnaif src/TSPnaif.c $(LDFLAGS) $(LDLIBS)
+
+TSPnaifO3: src/TSPnaif.c
+	$(ECHO) "$(LIGHT_ORANGE_COLOR)*** Compiling TSPnaif.c with O3 *** $(NO_COLOR)"
+	$(CC) -o bin/TSPnaifO3 src/TSPnaif.c $(CFLAGS) $(LDFLAGS) $(LDLIBS)
 
 clean:
 	rm -rf bin/* obj/*
