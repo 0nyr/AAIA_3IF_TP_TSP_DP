@@ -1,0 +1,14 @@
+# .gitignore
+
+# C compiler outputs
+obj/
+bin/
+*.o
+
+# Python
+__pycache__/
+*.pyc
+
+# pandoc & latex
+*.log
+script.py
