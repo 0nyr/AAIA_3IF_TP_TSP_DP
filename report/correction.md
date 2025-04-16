@@ -112,7 +112,7 @@ Pour bien comprendre combien de sous-problèmes on a, rien de tel qu'un petit ex
 2. 2nd niveau: 2 choix possibles pour i. A ce niveau, 1 noeud a déjà été visité, c'est-à-dire que $\#E = 1$, donc $\binom{3}{1} = 3$ valeures possibles pour E: $E \in \{\{0\}, \{1\}, \{2\} \} \:|\: E \in \{ \{0, 1\},  \{0, 2\},  \{1, 2\}\}$
 3. 3eme niveau: 1 choix obligatoire pour i, $\#E = 2, \#E = \binom{3}{2} = 3$
 
-On a donc: $\sum_{\forall Niv}(\#i_{Niv}*\#E_{Niv}) = (3*1) + (2*3) + (1*3) = 12$ sous-problèmes différents.  
+On a donc: $\sum_{\forall Niv}(\#i_{Niv}*\#E_{Niv}) = (3*1) + (2*3) + (1*3) = 12$ sous-problèmes différents. Auquel on peut ajouter le sous-problème *origine* $D(0, \{\})$ et le sous-problème *destination* $D(0, \{1, 2, 3\})$. Ces deux sous-problèmes sont toujours présents et donc sous-entendu (on ne les compte pas).
 
 #### Preuve par Aurélien Delage:
 

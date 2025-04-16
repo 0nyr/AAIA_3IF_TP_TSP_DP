@@ -85,6 +85,9 @@ int** createCost(int n){
 
 __uint64_t nb_calls = 0; // number of calls to computeD
 
+/**
+ * Held-Karp algorithm for the Travelling Salesman Problem
+ */
 int computeD(int i, set s, int n, int** cost){
     nb_calls += 1;
     // Preconditions: isIn(i,s) = false and isIn(0,s) = false
@@ -100,6 +103,26 @@ int computeD(int i, set s, int n, int** cost){
     return min;
 }
 
+/**
+ * computeD version with memoisation
+ */
+int computeD_memo(int i, set s, int n, int** cost, int** memo){
+    nb_calls += 1;
+    // Preconditions: isIn(i,s) = false and isIn(0,s) = false
+    // Postrelation: return the cost of the smallest path that starts from i, visits each vertex of s exactly once, and ends on 0
+    if (isEmpty(s)) return cost[i][0];
+    if (memo[i][s] != 0) return memo[i][s];
+    int min = INT_MAX;
+    for (int j=1; j<n; j++){
+        if (isIn(j,s)){
+            int d = computeD_memo(j, removeElement(s,j), n, cost, memo);
+            if (cost[i][j] + d < min) min = cost[i][j] + d;
+        }
+    }
+    memo[i][s] = min;
+    return min;
+}
+
 int main(){
     int n;
     printf("Number of vertices: "); fflush(stdout);
@@ -111,8 +134,36 @@ int main(){
     set s = createSet(n); // s contains all integer values ranging between 1 and n-1
     clock_t t = clock();
     int d = computeD(0, s, n, cost);
-    float duration = ((double) (clock() - t)) / CLOCKS_PER_SEC;
-    printf("Length of the smallest hamiltonian circuit = %d; CPU time = %.3fs\n", d, duration);
-    printf("    - Number of calls to computeD = %lu\n", nb_calls);
+    float duration;
+    // duration = ((double) (clock() - t)) / CLOCKS_PER_SEC;
+    // printf("Length of the smallest hamiltonian circuit = %d; CPU time = %.3fs\n", d, duration);
+    // printf("    - Number of calls to computeD = %lu\n", nb_calls);
+    
+    // Version with memoisation
+    nb_calls = 0;
+    int** memo = (int**) malloc(n*sizeof(int*));
+    for (int i=0; i<n; i++){
+        memo[i] = (int*)malloc((1 << n)*sizeof(int));
+        for (int j=0; j<(1 << n); j++) memo[i][j] = 0;
+    }
+    t = clock();
+    d = computeD_memo(0, s, n, cost, memo);
+    duration = ((double) (clock() - t)) / CLOCKS_PER_SEC;
+    printf("Length of the smallest hamiltonian circuit (with memoisation) = %d; CPU time = %.3fs\n", d, duration);
+    printf("    - Number of calls to computeD_memo = %lu\n", nb_calls);
+
+    // for (n = 1; n < 10; n++){
+    //     nb_calls = 0;
+    //     set s = createSet(n);
+    //     computeD(0, s, n, cost);
+    //     printf("n = %d; Number of calls to computeD = %lu\n", n, nb_calls);
+    // }
+
+    // Free the cost matrix
+    for (int i=0; i<n; i++){
+        free(cost[i]);
+    }
+    free(cost);
+    
     return 0;
 }
