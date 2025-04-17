@@ -141,11 +141,14 @@ int main(){
     
     // Version with memoisation
     nb_calls = 0;
+    t = clock();
     int** memo = (int**) malloc(n*sizeof(int*));
     for (int i=0; i<n; i++){
         memo[i] = (int*)malloc((1 << n)*sizeof(int));
         for (int j=0; j<(1 << n); j++) memo[i][j] = 0;
     }
+    printf("Alloc time = %.3fs\n", ((double) (clock() - t)) / CLOCKS_PER_SEC);
+
     t = clock();
     d = computeD_memo(0, s, n, cost, memo);
     duration = ((double) (clock() - t)) / CLOCKS_PER_SEC;
