@@ -2,6 +2,9 @@
  Implementation of a naive DP-based approach for the Travelling Salesman Problem (the approach is naive because it computes more than once a same state as it does not do memoisation; the goal of the practical session is to improve it with memoisation!)
  Copyright (C) 2023 Christine Solnon
  Ce programme est un logiciel libre ; vous pouvez le redistribuer et/ou le modifier au titre des clauses de la Licence Publique Générale GNU, telle que publiée par la Free Software Foundation. Ce programme est distribué dans l'espoir qu'il sera utile, mais SANS AUCUNE GARANTIE ; sans même une garantie implicite de COMMERCIABILITE ou DE CONFORMITE A UNE UTILISATION PARTICULIERE. Voir la Licence Publique Générale GNU pour plus de détails.
+ 
+ Compile with:
+    gcc -o tspnaif TSPnaif.c -O3 -Wall -lm
  */
 
 #include <stdio.h>
@@ -124,16 +127,17 @@ int computeD_memo(int i, set s, int n, int** cost, int** memo){
 }
 
 int main(){
-    int n;
+    int n, d;
     printf("Number of vertices: "); fflush(stdout);
     if ((scanf("%d",&n) <= 0) || (n > 32) || (n < 1)){
         printf("The number of vertices must be an integer value in [1,32].\n");
         return 0;
     }
+
     int** cost = createCost(n);
     set s = createSet(n); // s contains all integer values ranging between 1 and n-1
     clock_t t = clock();
-    int d = computeD(0, s, n, cost);
+    // int d = computeD(0, s, n, cost);
     float duration;
     // duration = ((double) (clock() - t)) / CLOCKS_PER_SEC;
     // printf("Length of the smallest hamiltonian circuit = %d; CPU time = %.3fs\n", d, duration);
@@ -143,9 +147,15 @@ int main(){
     nb_calls = 0;
     t = clock();
     int** memo = (int**) malloc(n*sizeof(int*));
+    /**
+     * Allocate the memoisation table
+     * There are n rows (one for each vertex).
+     * The number of columns is 2^(n-1) (one for each subset of vertices).
+     * The size of the memoisation table is thus n * 2^(n-1) integers.
+     */
     for (int i=0; i<n; i++){
-        memo[i] = (int*)malloc((1 << n)*sizeof(int));
-        for (int j=0; j<(1 << n); j++) memo[i][j] = 0;
+        memo[i] = (int*)malloc((pow(2, n - 1))*sizeof(int));
+        for (int j=0; j<(pow(2, n - 1)); j++) memo[i][j] = 0;
     }
     printf("Alloc time = %.3fs\n", ((double) (clock() - t)) / CLOCKS_PER_SEC);
 

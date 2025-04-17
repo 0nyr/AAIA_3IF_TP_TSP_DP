@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <stdbool.h>
 
 int iseed = 1;
 
@@ -73,7 +74,7 @@ int generateRandomTour(int n, int** cost, int seed, int* sol){
     for (int i=1; i<n; i++){
         int j = nextRand(nbCand);
         sol[i] = cand[j];
-        cand[j] = cand[--nbCand]; // remove the chosen candidate
+        cand[j] = cand[--nbCand]; // remove the chosen candidate, replace it by another (unvisited) candidate
         total += cost[sol[i-1]][sol[i]];
     }
     total += cost[sol[n-1]][sol[0]]; // don't forget the return to the depot
@@ -97,21 +98,143 @@ void print(int* sol, int n, int totalLength, FILE* fd){
     fprintf(fd, "wait = input(\"Enter return to continue\")\n");
 }
 
+/**
+ * Check if the edges (node0->node1) and (nodeLast->nodeNew) "cross"
+ */
+bool isCrossing(
+    int node0, // v_i
+    int node1, // v{i+1}
+    int nodeLast, // v_j
+    int nodeNew, // v{j+1}
+    int** cost
+) {
+    /* check each edge before the last one
+
+    Example:
+    ╎     ╎
+    Ⓝ◁---①
+    ╎◸   ◹╎
+    ╎ ╲ ╱ ╎
+    ╎  ╳  ╎
+    ╎ ╱ ╲ ╎
+    ╎╱   ╲╎
+    ⓪---▷Ⓛ
+    ╎     ╎
+    We check that any edge (⓪->① + Ⓛ->Ⓝ) <= (⓪->Ⓛ + ①->Ⓝ)
+    */
+    // cost Ⓛ->Ⓝ
+    int costLastToNew = cost[nodeLast][nodeNew];
+    // cost ⓪->①
+    int cost0to1 = cost[node0][node1];
+    // cost ⓪->Ⓛ
+    int cost0toLast = cost[node0][nodeLast];
+    // cost ①->Ⓝ
+    int cost1toNew = cost[node1][nodeNew];
+    if (
+        (cost0toLast + cost1toNew) // cost ⓪->Ⓛ + ①->Ⓝ
+        < (cost0to1 + costLastToNew) // cost ⓪->① + Ⓛ->Ⓝ
+    ) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool while_procedure(int n, int* sol, int total, int** cost){
+    int v_i0 = 0;
+    int v_i1 = 0;
+    int v_j0 = 0;
+    int v_j1 = 0;
+    for (int i=0; i<n-1; i++) {
+        for (int j=i+2; j<n; j++) {
+            v_i0 = sol[i];
+            v_i1 = sol[i+1];
+            v_j0 = sol[j];
+            if (j == n-1) 
+                v_j1 = sol[0];
+            else
+                v_j1 = sol[j+1];
+            
+            if (isCrossing(v_i0, v_i1, v_j0, v_j1, cost)) {
+                // swap arcs (v_i0->v_i1), (v_j0->v_j1) with (v_i0->v_j0), (v_i1->v_j1)
+                // To do that, we swap v_j0 and v_i1
+                // as we swap two by two any intermediate vertices
+                // between v_i1 and v_j0
+                int nb_swaps = ceil((j-i)/2.0);
+                for (int k=0; k<nb_swaps; k++) {
+                    int tmp = sol[i+1+k];
+                    sol[i+1+k] = sol[j-k];
+                    sol[j-k] = tmp;
+                }
+                return true; // crossing detected
+            }
+        }
+    }
+    return false; // no crossing detected
+}
+
+void print_sol(int* sol, int n){
+    // input: n = number n of vertices; sol[0..n-1] = permutation of [0,n-1]
+    // side effect: print the tour associated with sol
+    printf("Tour: ");
+    for (int i=0; i<n; i++) {
+        printf("%d ", sol[i]);
+    }
+    printf("\n");
+}
+
+int compute_sol_length(int* sol, int n, int** cost){
+    // input: n = number n of vertices; sol[0..n-1] = permutation of [0,n-1]
+    // return the length of the tour associated with sol
+    int total = 0;
+    for (int i=0; i<n-1; i++) {
+        total += cost[sol[i]][sol[i+1]];
+    }
+    total += cost[sol[n-1]][sol[0]]; // don't forget the return to the depot
+    return total;
+}
+
+void print_sol_with_cost(int* sol, int n, int** cost){
+    // input: n = number n of vertices; sol[0..n-1] = permutation of [0,n-1]; total = length of the tour associated with sol
+    // side effect: print the tour associated with sol and its length
+    printf("Tour: ");
+    for (int i=0; i<n; i++) {
+        printf("%d ", sol[i]);
+    }
+    printf(" - Total length = %d\n", compute_sol_length(sol, n, cost));
+}
+
 int greedyLS(int n, int* sol, int total, int** cost){
     // Input: sol[0..n-1] contains a permutation of [0,n-1], and total = length of the tour associated with sol
     // Output: sol[0..n-1] contains a permutation of [Ø,n-1] such that the corresponding tour does not have crossing edges
     // Return the length of the tour associated with sol
-    // Insert your code for greedily improving sol[0..n-1] here!
-    return total;
+    bool has_crossing;
+    while (true){
+        #ifdef DEBUG
+        print_sol_with_cost(sol, n, cost);
+        #endif
+        has_crossing = while_procedure(n, sol, total, cost);
+        if (!has_crossing) break;
+    }
+
+    return compute_sol_length(sol, n, cost);
 }
 
-int main(){
+int main(int argc, char** argv){
     int n;
-    printf("Number of vertices: "); fflush(stdout);
-    scanf("%d",&n);
+
+    // Get parameters either from command line or from user
     int nbTrials;
-    printf("Number of random tour constructions: "); fflush(stdout);
-    scanf("%d",&nbTrials);
+    if (argc > 2) {
+        n = atoi(argv[1]);
+        nbTrials = atoi(argv[2]);
+    } else {
+        printf("Number of vertices: "); fflush(stdout);
+        scanf("%d",&n);
+        printf("Number of random tour constructions: "); fflush(stdout);
+        scanf("%d",&nbTrials);
+    }
+
     FILE* fd  = fopen("script.py", "w");
     int** cost = createCost(n, fd);
     int sol[n];
