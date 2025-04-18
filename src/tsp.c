@@ -2,6 +2,8 @@
  Code framework for solving the Travelling Salesman Problem with local search
  Copyright (C) 2023 Christine Solnon
  Ce programme est un logiciel libre ; vous pouvez le redistribuer et/ou le modifier au titre des clauses de la Licence Publique Générale GNU, telle que publiée par la Free Software Foundation. Ce programme est distribué dans l'espoir qu'il sera utile, mais SANS AUCUNE GARANTIE ; sans même une garantie implicite de COMMERCIABILITE ou DE CONFORMITE A UNE UTILISATION PARTICULIERE. Voir la Licence Publique Générale GNU pour plus de détails.
+ 
+ Compile with: gcc -o tspls tsp.c -O3 -Wall -lm
  */
 
 #include <math.h>
@@ -140,6 +142,16 @@ bool isCrossing(
     }
 }
 
+bool is_2opt(int v_i0, int v_i1, int v_j0, int v_j1, int** cost){
+    int oldCost = cost[v_i0][v_i1] + cost[v_j0][v_j1];
+    int newCost = cost[v_i0][v_j0] + cost[v_i1][v_j1];
+    if (newCost < oldCost) {
+        return true; // the two edges cross
+    } else {
+        return false; // the two edges do not cross
+    }
+}
+
 void swap(int* sol, int i, int j){
     // input: sol[0..n-1] = permutation of [0,n-1]; i,j = indices of two vertices in sol
     // side effect: swap the two vertices in sol
@@ -163,6 +175,7 @@ bool while_procedure(int n, int* sol, int total, int** cost){
             else
                 v_j1 = sol[j+1];
             
+            //if (is_2opt(v_i0, v_i1, v_j0, v_j1, cost)) {
             if (isCrossing(v_i0, v_i1, v_j0, v_j1, cost)) {
                 // swap arcs (v_i0->v_i1), (v_j0->v_j1) with (v_i0->v_j0), (v_i1->v_j1)
                 // To do that, we swap v_j0 and v_i1
@@ -225,6 +238,37 @@ int greedyLS(int n, int* sol, int total, int** cost){
 
     return compute_sol_length(sol, n, cost);
 }
+
+int greedyLS2(int n, int* sol, int total, int** cost){
+    int bestImprovement, ibest, jbest;
+    do{
+        bestImprovement = 0;
+        for (int i=0; i<n-1; i++){
+            for (int j=i+1; j<n; j++){
+                int jplus1 = (j+1)%n;
+                int oldCost = cost[sol[i]][sol[i+1]] + cost[sol[j]][sol[jplus1]];
+                int newCost = cost[sol[i]][sol[j]] + cost[sol[i+1]][sol[jplus1]];
+                if (newCost - oldCost < bestImprovement){
+                    bestImprovement = newCost - oldCost;
+                    ibest = i;
+                    jbest = j;
+                }
+            }
+        }
+        if (bestImprovement < 0){
+            total += bestImprovement;
+            ibest++;
+            while (ibest < jbest){
+                int aux = sol[ibest];
+                sol[ibest] = sol[jbest];
+                sol[jbest] = aux;
+                ibest++; jbest--;
+            }
+        }
+    } while (bestImprovement < 0);
+    return total;
+}
+
 
 /**
  * Iterative Greedy Local Search
@@ -292,24 +336,65 @@ int main(int argc, char** argv){
     FILE* fd  = fopen("script.py", "w");
     int** cost = createCost(n, fd);
     int sol[n];
-    int total = generateRandomTour(n, cost, iseed, sol);
+    int total;
 
-    // for (int i=0; i<nb_iterations; i++){
-    //     total = generateRandomTour(n, cost, i, sol);
-    //     printf("Trial %d: Initial tour length = %d; ", i, total);
-    //     clock_t t = clock();
-    //     total = greedyLS(n, sol, total, cost);
-    //     float d = ((double) (clock() - t)) / CLOCKS_PER_SEC;
-    //     printf("Tour length after GreedyLS = %d; CPU time = %.3fs\n", total, d);
-    //     print(sol, n, total, fd);
-    // }
+    // Generate random tours
 
-    // ILS
-    clock_t t = clock();
-    total = iterative_greedy_LS(n, sol, total, cost, nb_iterations, nb_perturbations);
-    float d = ((double) (clock() - t)) / CLOCKS_PER_SEC;
-    printf("Tour length after ILS = %d; CPU time = %.3fs\n", total, d);
-    print(sol, n, total, fd);
+
+    clock_t global_start = clock();
+    int totals1[n];
+
+    iseed = 1; // reset the random number generator
+    for (int i=0; i<nb_iterations; i++){
+        total = generateRandomTour(n, cost, i, sol);
+        printf("Trial %d: Initial tour length = %d; ", i, total);
+        clock_t t = clock();
+        total = greedyLS2(n, sol, total, cost);
+        totals1[i] = total;
+        float d = ((double) (clock() - t)) / CLOCKS_PER_SEC;
+        printf("Tour length after GreedyLS = %d; CPU time = %.3fs\n", total, d);
+        print(sol, n, total, fd);
+    }
+
+    float global_duration = ((double) (clock() - global_start)) / CLOCKS_PER_SEC;
+    printf("Total CPU time = %.3fs\n", global_duration);
+
+    global_start = clock();
+    int totals2[nb_iterations];
+    iseed = 1; // reset the random number generator
+
+    for (int i=0; i<nb_iterations; i++){
+        total = generateRandomTour(n, cost, i, sol);
+        printf("Trial %d: Initial tour length = %d; ", i, total);
+        clock_t t = clock();
+        total = greedyLS(n, sol, total, cost);
+        totals2[i] = total;
+        float d = ((double) (clock() - t)) / CLOCKS_PER_SEC;
+        printf("Tour length after GreedyLS = %d; CPU time = %.3fs\n", total, d);
+        print(sol, n, total, fd);
+    }
+
+    global_duration = ((double) (clock() - global_start)) / CLOCKS_PER_SEC;
+    printf("Total CPU time (V2) = %.3fs\n", global_duration);
+
+    // compute difference between the two methods
+    float diff[nb_iterations];
+    float avg_diff = 0;
+    for (int i=0; i<nb_iterations; i++){
+        diff[i] = (float)(totals1[i] - totals2[i]) / totals1[i];
+        avg_diff += diff[i];
+        printf("Trial %d: Difference = %f\n", i, diff[i]);
+    }
+    avg_diff /= nb_iterations;
+    printf("Average difference (1 vs 2) = %f\n", avg_diff);
+
+    // // ILS
+    // total = generateRandomTour(n, cost, iseed, sol);
+    // clock_t t = clock();
+    // total = iterative_greedy_LS(n, sol, total, cost, nb_iterations, nb_perturbations);
+    // float d = ((double) (clock() - t)) / CLOCKS_PER_SEC;
+    // printf("Tour length after ILS = %d; CPU time = %.3fs\n", total, d);
+    // print(sol, n, total, fd);
     
     
     fclose(fd);
