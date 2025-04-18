@@ -140,6 +140,14 @@ bool isCrossing(
     }
 }
 
+void swap(int* sol, int i, int j){
+    // input: sol[0..n-1] = permutation of [0,n-1]; i,j = indices of two vertices in sol
+    // side effect: swap the two vertices in sol
+    int tmp = sol[i];
+    sol[i] = sol[j];
+    sol[j] = tmp;
+}
+
 bool while_procedure(int n, int* sol, int total, int** cost){
     int v_i0 = 0;
     int v_i1 = 0;
@@ -162,9 +170,7 @@ bool while_procedure(int n, int* sol, int total, int** cost){
                 // between v_i1 and v_j0
                 int nb_swaps = ceil((j-i)/2.0);
                 for (int k=0; k<nb_swaps; k++) {
-                    int tmp = sol[i+1+k];
-                    sol[i+1+k] = sol[j-k];
-                    sol[j-k] = tmp;
+                    swap(sol, i+1+k, j-k);
                 }
                 return true; // crossing detected
             }
@@ -220,33 +226,93 @@ int greedyLS(int n, int* sol, int total, int** cost){
     return compute_sol_length(sol, n, cost);
 }
 
+/**
+ * Iterative Greedy Local Search
+ * 
+ * Preconditions: sol contains a random valid tour
+ */
+int iterative_greedy_LS(
+    int n, 
+    int* sol, 
+    int total, 
+    int** cost, 
+    int nb_iterations,
+    int nb_perturbations
+) {
+    // Get initial solution
+    int UB = greedyLS(n, sol, total, cost);
+    int new_sol[n];
+    
+    for (int i=0; i<nb_iterations; i++) {
+        // Copy the current solution
+        memcpy(new_sol, sol, n*sizeof(int));
+
+        // Perturb the solution
+        for (int j=0; j<nb_perturbations; j++) {
+            // Exchange randownly two vertices
+            int rand_index_1, rand_index_2;
+            do {
+                rand_index_1 = nextRand(n);
+                rand_index_2 = nextRand(n);
+            } while (rand_index_1 == rand_index_2);
+            swap(sol, rand_index_1, rand_index_2);
+        }
+        int new_length = greedyLS(n, new_sol, total, cost);
+        if (new_length < UB) {
+            // Update the best solution
+            UB = new_length;
+            memcpy(sol, new_sol, n*sizeof(int));
+            printf("New best solution found: ");
+            print_sol_with_cost(sol, n, cost);
+        }
+    }
+
+    return UB;
+}
+
 int main(int argc, char** argv){
     int n;
 
     // Get parameters either from command line or from user
-    int nbTrials;
-    if (argc > 2) {
+    int nb_iterations;
+    int nb_perturbations;
+    if (argc > 3) {
         n = atoi(argv[1]);
-        nbTrials = atoi(argv[2]);
+        nb_iterations = atoi(argv[2]);
+        nb_perturbations = atoi(argv[3]);
     } else {
         printf("Number of vertices: "); fflush(stdout);
         scanf("%d",&n);
-        printf("Number of random tour constructions: "); fflush(stdout);
-        scanf("%d",&nbTrials);
+        printf("Number of random tour constructions / iterations: "); fflush(stdout);
+        scanf("%d",&nb_iterations);
+        printf("Number of perturbations: "); fflush(stdout);
+        scanf("%d",&nb_perturbations);
     }
 
     FILE* fd  = fopen("script.py", "w");
     int** cost = createCost(n, fd);
     int sol[n];
-    for (int i=0; i<nbTrials; i++){
-        int total = generateRandomTour(n, cost, i, sol);
-        printf("Trial %d: Initial tour length = %d; ", i, total);
-        clock_t t = clock();
-        total = greedyLS(n, sol, total, cost);
-        float d = ((double) (clock() - t)) / CLOCKS_PER_SEC;
-        printf("Tour length after GreedyLS = %d; CPU time = %.3fs\n", total, d);
-        print(sol, n, total, fd);
-    }
+    int total = generateRandomTour(n, cost, iseed, sol);
+
+    // for (int i=0; i<nb_iterations; i++){
+    //     total = generateRandomTour(n, cost, i, sol);
+    //     printf("Trial %d: Initial tour length = %d; ", i, total);
+    //     clock_t t = clock();
+    //     total = greedyLS(n, sol, total, cost);
+    //     float d = ((double) (clock() - t)) / CLOCKS_PER_SEC;
+    //     printf("Tour length after GreedyLS = %d; CPU time = %.3fs\n", total, d);
+    //     print(sol, n, total, fd);
+    // }
+
+    // ILS
+    clock_t t = clock();
+    total = iterative_greedy_LS(n, sol, total, cost, nb_iterations, nb_perturbations);
+    float d = ((double) (clock() - t)) / CLOCKS_PER_SEC;
+    printf("Tour length after ILS = %d; CPU time = %.3fs\n", total, d);
+    print(sol, n, total, fd);
+    
+    
+    fclose(fd);
     return 0;
 };
 

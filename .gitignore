@@ -12,3 +12,5 @@ __pycache__/
 # pandoc & latex
 *.log
 script.py
+src/tspls
+src/tspnaif

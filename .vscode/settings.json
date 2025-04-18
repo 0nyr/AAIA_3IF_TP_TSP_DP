@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "cmath": "c"
+        "cmath": "c",
+        "concepts": "c",
+        "type_traits": "c"
     }
 }
