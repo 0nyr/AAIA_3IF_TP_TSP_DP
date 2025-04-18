@@ -12,6 +12,10 @@ Florian Rascoussier, Aurélien Delage, Christine Solnon
 
 Mars 2025
 
+>[!WARNING]
+This file is old, see the latest version on my Obsidian.
+
+
 ## 0. Introduction
 
 >Voir le sujet: **sujet-TSP-DP-2022.pdf**

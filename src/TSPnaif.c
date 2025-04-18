@@ -87,6 +87,7 @@ int** createCost(int n){
 }
 
 __uint64_t nb_calls = 0; // number of calls to computeD
+__uint64_t nb_states = 0;          // nb of states in the memoisation table
 
 /**
  * Held-Karp algorithm for the Travelling Salesman Problem
@@ -126,10 +127,93 @@ int computeD_memo(int i, set s, int n, int** cost, int** memo){
     return min;
 }
 
-int main(){
+int heldKarp_iter(int n, int **cost, int **dp, int **succ){
+    int FULL = 1 << (n-1); // stop when 2^(n-1) - 1 states are reached
+    // initialize the dp and succ tables
+    for(int i=0; i<n; ++i){
+        for(int S=0; S<FULL; ++S){
+            dp[i][S]   = INT_MAX;
+            succ[i][S] = -1;
+        }
+    }
+
+    // base case: start from depot (0) and go to the first vertex
+    for(int i=1; i<n; ++i) dp[i][0] = cost[i][0];
+
+    // compute the cost of all paths
+    for(int S=1; S<FULL; ++S){ // all subsets of vertices
+        for(int i=1; i<n; ++i){
+            if(isIn(i,S)) continue; // i must not be in S
+            int best = INT_MAX;
+            int bestj = -1;
+            for(int j=1; j<n; ++j){
+                if(!isIn(j,S)) continue; // j must be in S
+                int S2 = removeElement(S,j);
+                int val = dp[j][S2];
+                if(val==INT_MAX) continue; // no path from j to S2
+                int alt = cost[i][j] + val;
+                if(alt < best){
+                    best  = alt;
+                    bestj = j;
+                }
+            }
+            dp[i][S] = best;
+            succ[i][S] = bestj;
+            nb_states++;
+        }
+    }
+
+    // return to depot (0)
+    int best = INT_MAX;
+    int bestj = -1; 
+    int ALL = FULL-1; // 2^(n-1) - 1, a full set 111...111 with n-1 bits
+    for(int j=1; j<n; ++j){
+        int val = dp[j][removeElement(ALL,j)];
+        if(val==INT_MAX) continue;
+        int alt = cost[0][j] + val;
+        if(alt < best){
+            best  = alt;
+            bestj = j;
+        }
+    }
+    succ[0][ALL] = bestj;
+    return best;
+}
+
+/**
+ * Print the tour, iterate over the successors
+ * starting from the depot (0) and going to the first vertex
+ * and then to the next vertex, etc.
+ * The tour ends when we return to the depot (0)
+ */
+void printTour(int n, int **succ){
+    int S = (1<<(n-1)) - 1;   // full set {1,2,...,n-1}
+    int i = 0;
+    printf("Circuit : 0");
+    for(int k=0; k<n-1; ++k){
+        int j = succ[i][S];
+        if(j==-1){ printf(" ?"); break; }
+        printf(" %d", j);
+        S = removeElement(S, j);
+        i = j;
+    }
+    printf(" 0\n");
+}
+
+int main(int argc, char** argv){
     int n, d;
-    printf("Number of vertices: "); fflush(stdout);
-    if ((scanf("%d",&n) <= 0) || (n > 32) || (n < 1)){
+
+    // Get parameters either from command line or from user
+    if (argc > 1) {
+        n = atoi(argv[1]);
+    } else {
+        printf("Number of vertices: "); fflush(stdout);
+        if (scanf("%d", &n) != 1) {
+            printf("Error reading the number of vertices.\n");
+            return 0;
+        }
+    }
+    if ((n > 32) || (n < 1)){
         printf("The number of vertices must be an integer value in [1,32].\n");
         return 0;
     }
@@ -164,6 +248,21 @@ int main(){
     duration = ((double) (clock() - t)) / CLOCKS_PER_SEC;
     printf("Length of the smallest hamiltonian circuit (with memoisation) = %d; CPU time = %.3fs\n", d, duration);
     printf("    - Number of calls to computeD_memo = %lu\n", nb_calls);
+
+    // Version with dynamic programming
+    nb_calls = 0;
+    t = clock();
+    int **dp = (int**) malloc(n*sizeof(int*));
+    int **succ = (int**) malloc(n*sizeof(int*));
+    for (int i=0; i<n; i++){
+        dp[i] = (int*)malloc((pow(2, n - 1))*sizeof(int));
+        succ[i] = (int*)malloc((pow(2, n - 1))*sizeof(int));
+    }
+    d = heldKarp_iter(n, cost, dp, succ);
+    duration = ((double) (clock() - t)) / CLOCKS_PER_SEC;
+    printf("Length of the smallest hamiltonian circuit (with dynamic programming) = %d; CPU time = %.3fs\n", d, duration);
+    printf("    - Number of states in the memoisation table = %lu\n", nb_states);
+    printTour(n, succ);
 
     // for (n = 1; n < 10; n++){
     //     nb_calls = 0;
